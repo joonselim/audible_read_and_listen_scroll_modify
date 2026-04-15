@@ -29,6 +29,9 @@ export function Player() {
   })
   const [mode, setMode] = useState<Mode>('read-listen')
   const [showDrawer, setShowDrawer] = useState(false)
+  // Two-step scroll unlock: first scroll shows hint, second scroll unlocks
+  const [hintVisible, setHintVisible] = useState(false)
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Drive playback clock
   useEffect(() => {
@@ -68,19 +71,37 @@ export function Player() {
     return () => window.clearTimeout(t)
   }, [state.activeWordId, state.isLocked])
 
-  // Detect user gesture to unlock (wheel / touch)
+  // Two-step gesture detection: first scroll → show hint, second scroll → unlock
+  const hintVisibleRef = useRef(false)
+  // keep ref in sync so event handlers see latest value
+  hintVisibleRef.current = hintVisible
+
   useEffect(() => {
     const el = textViewportRef.current
     if (!el) return
 
     let touchY: number | null = null
-    const unlock = () =>
-      setState(s => (s.isLocked ? { ...s, isLocked: false } : s))
+
+    const handleGesture = () => {
+      if (!state.isLocked) return
+
+      if (!hintVisibleRef.current) {
+        // Step 1: show hint, DON'T unlock
+        setHintVisible(true)
+        // Auto-dismiss hint after 3s if user doesn't scroll again
+        if (hintTimer.current) clearTimeout(hintTimer.current)
+        hintTimer.current = setTimeout(() => setHintVisible(false), 3000)
+      } else {
+        // Step 2: actually unlock
+        if (hintTimer.current) clearTimeout(hintTimer.current)
+        setHintVisible(false)
+        setState(s => (s.isLocked ? { ...s, isLocked: false } : s))
+      }
+    }
 
     const onWheel = (e: WheelEvent) => {
       if (!state.isLocked) return
-      if (programmaticScroll.current) return
-      if (Math.abs(e.deltaY) > 2) unlock()
+      if (Math.abs(e.deltaY) > 2) handleGesture()
     }
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches[0]?.clientY ?? null
@@ -88,7 +109,7 @@ export function Player() {
     const onTouchMove = (e: TouchEvent) => {
       if (!state.isLocked || touchY == null) return
       const dy = (e.touches[0]?.clientY ?? touchY) - touchY
-      if (Math.abs(dy) > 8) unlock()
+      if (Math.abs(dy) > 8) handleGesture()
     }
 
     el.addEventListener('wheel', onWheel, { passive: true })
@@ -105,6 +126,7 @@ export function Player() {
   const handleWordTap = useCallback(
     (word: BookWord) => {
       if (state.isLocked) return // ignore taps while locked
+      setHintVisible(false)
       setState(s => ({
         ...s,
         previousTime: s.previousTime == null ? s.currentTime : s.previousTime,
@@ -133,7 +155,10 @@ export function Player() {
   const dismissGoBack = () =>
     setState(s => ({ ...s, previousTime: null }))
 
-  const resumeLock = () => setState(s => ({ ...s, isLocked: true }))
+  const resumeLock = () => {
+    setHintVisible(false)
+    setState(s => ({ ...s, isLocked: true }))
+  }
   const togglePlay = () => setState(s => ({ ...s, isPlaying: !s.isPlaying }))
   const skipBack30 = () =>
     setState(s => {
@@ -180,8 +205,8 @@ export function Player() {
 
       {/* Text viewport */}
       <div className="relative flex-1 min-h-0">
-        {/* Lock / unlock indicator */}
-        {state.isLocked ? (
+        {/* Lock / hint / unlock indicator — three states */}
+        {state.isLocked && !hintVisible && (
           <div className="pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] text-neutral-400 ring-1 ring-white/5 backdrop-blur-sm">
             <LockIcon />
             <span>Following playback</span>
@@ -190,7 +215,16 @@ export function Player() {
               aria-hidden
             />
           </div>
-        ) : (
+        )}
+        {state.isLocked && hintVisible && (
+          <div className="fade-in pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/40 bg-black/85 px-2.5 py-1.5 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm">
+            <ScrollUpIcon />
+            <span className="font-medium">Scroll up to unlock</span>
+            <span className="text-neutral-500">·</span>
+            <span className="text-neutral-300">Tap to listen from there</span>
+          </div>
+        )}
+        {!state.isLocked && (
           <button
             onClick={resumeLock}
             className="fade-in absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/60 bg-black/90 px-2.5 py-1 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm active:scale-[0.98]"
@@ -494,6 +528,13 @@ function LockIcon() {
     <svg width="10" height="12" viewBox="0 0 12 14" fill="none">
       <rect x="2" y="6" width="8" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
       <path d="M4 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  )
+}
+function ScrollUpIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M6 10V2M3 4.5L6 1.5 9 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
