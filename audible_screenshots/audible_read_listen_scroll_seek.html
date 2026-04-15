@@ -1,0 +1,160 @@
+
+<style>
+  .wrap { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; padding: 1.5rem 0; }
+  .phone { width: 220px; border-radius: 28px; border: 2px solid var(--color-border-secondary); background: #0d1117; overflow: hidden; font-family: var(--font-sans); }
+  .statusbar { display: flex; justify-content: space-between; padding: 8px 16px 4px; font-size: 10px; color: #888; }
+  .toggle-row { display: flex; gap: 0; margin: 8px 16px 12px; background: #1c2028; border-radius: 20px; padding: 3px; }
+  .tog { flex: 1; text-align: center; font-size: 11px; padding: 5px 0; border-radius: 16px; color: #888; }
+  .tog.active { background: #fff; color: #0d1117; font-weight: 500; }
+  .textview { padding: 0 16px; height: 260px; overflow: hidden; position: relative; }
+  .textview.scrollable { overflow-y: auto; cursor: default; }
+  .line { font-size: 13px; line-height: 1.7; color: #ccc; padding: 2px 0; transition: all 0.15s; }
+  .line.playing { color: #fff; background: rgba(255,180,0,0.18); border-radius: 4px; padding: 2px 6px; margin: 0 -6px; font-weight: 500; }
+  .line.seekable:hover { color: #fff; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 6px; margin: 0 -6px; cursor: pointer; }
+  .line.tapped { color: #ffb400 !important; background: rgba(255,180,0,0.22) !important; border-radius: 4px; padding: 2px 6px; margin: 0 -6px; }
+  .chapter-btn { display: flex; align-items: center; gap: 6px; margin: 0 16px 8px; background: #1c2028; border-radius: 8px; padding: 6px 10px; }
+  .chapter-btn span { font-size: 11px; color: #888; }
+  .chapter-arrow { font-size: 10px; color: #555; margin-left: auto; }
+  .playerbar { border-top: 0.5px solid #2a2f38; padding: 8px 16px 12px; display: flex; align-items: center; gap: 10px; }
+  .bookthumb { width: 32px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #c46a00, #7a3800); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #ffb400; font-weight: 700; }
+  .booktitle { flex: 1; min-width: 0; }
+  .booktitle p { margin: 0; font-size: 10px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .booktitle small { font-size: 9px; color: #666; }
+  .btn30 { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #555; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #aaa; }
+  .playbtn { width: 28px; height: 28px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+  .tag.before { background: #2a2f38; color: #888; }
+  .tag.after { background: rgba(255,180,0,0.18); color: #ffb400; }
+  .label { text-align: center; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+  .hint { font-size: 11px; color: #ffb400; text-align: center; margin: 4px 0 8px; opacity: 0; transition: opacity 0.3s; }
+  .hint.visible { opacity: 1; }
+  .scroll-hint { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 10px; color: #555; margin-top: 4px; padding: 4px 0; }
+  .fade-top { position: absolute; top: 0; left: 0; right: 0; height: 32px; background: linear-gradient(to bottom, #0d1117, transparent); pointer-events: none; z-index: 1; }
+  .fade-bot { position: absolute; bottom: 0; left: 0; right: 0; height: 32px; background: linear-gradient(to top, #0d1117, transparent); pointer-events: none; z-index: 1; }
+  .seek-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,180,0,0.25); border-radius: 50%; font-size: 8px; color: #ffb400; margin-right: 3px; vertical-align: middle; }
+</style>
+
+<div class="wrap">
+
+  <div>
+    <div class="label">현재 (before)</div>
+    <div class="tag before">스크롤 불가 · 챕터 단위 이동만 가능</div>
+    <div class="phone">
+      <div class="statusbar"><span>6:17</span><span>38%</span></div>
+      <div class="toggle-row">
+        <div class="tog">Listen</div>
+        <div class="tog active">Read & Listen</div>
+      </div>
+      <div class="textview" id="before-text">
+        <div class="fade-top"></div>
+        <div class="line">from Paul's sudden understanding</div>
+        <div class="line">He saw it now — the jihad to come,</div>
+        <div class="line playing">the wave of fanaticism that his</div>
+        <div class="line">very existence had set in motion.</div>
+        <div class="line">Jessica watched her son's face and</div>
+        <div class="line">felt the chill of it. He was seeing</div>
+        <div class="line">something she could not share, a</div>
+        <div class="line">prescience born of spice and need.</div>
+        <div class="line">The Fremen waited in silence,</div>
+        <div class="line">their loyalty a living thing.</div>
+        <div class="fade-bot"></div>
+      </div>
+      <div class="chapter-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="#555"/><rect x="1" y="6" width="8" height="1.5" rx="0.75" fill="#555"/><rect x="1" y="10" width="10" height="1.5" rx="0.75" fill="#555"/></svg>
+        <span>Chapter 31</span>
+        <span class="chapter-arrow">›</span>
+      </div>
+      <div class="playerbar">
+        <div class="bookthumb">Dune</div>
+        <div class="booktitle"><p>Dune | Chapter 31</p><small>8h 53m left</small></div>
+        <div class="btn30">30</div>
+        <div class="playbtn">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M1 1l8 5-8 5V1z" fill="#0d1117"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1v10M3 8l3 3 3-3" stroke="#555" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      스크롤 불가 · 30초 또는 챕터 단위만
+    </div>
+  </div>
+
+  <div>
+    <div class="label">제안 (after)</div>
+    <div class="tag after"><span class="seek-icon">▶</span>스크롤 후 탭으로 위치 이동</div>
+    <div class="phone">
+      <div class="statusbar"><span>6:17</span><span>38%</span></div>
+      <div class="toggle-row">
+        <div class="tog">Listen</div>
+        <div class="tog active">Read & Listen</div>
+      </div>
+      <div class="textview scrollable" id="after-text">
+        <div id="hint-msg" class="hint"></div>
+        <div class="line seekable" data-idx="0">the wave of fanaticism that his</div>
+        <div class="line seekable" data-idx="1">very existence had set in motion.</div>
+        <div class="line seekable playing" data-idx="2" id="cur-line">Jessica watched her son's face and</div>
+        <div class="line seekable" data-idx="3">felt the chill of it. He was seeing</div>
+        <div class="line seekable" data-idx="4">something she could not share, a</div>
+        <div class="line seekable" data-idx="5">prescience born of spice and need.</div>
+        <div class="line seekable" data-idx="6">The Fremen waited in silence,</div>
+        <div class="line seekable" data-idx="7">their loyalty a living thing.</div>
+        <div class="line seekable" data-idx="8">"We ride at first light," Stilgar</div>
+        <div class="line seekable" data-idx="9">said, his voice low and steady.</div>
+        <div class="line seekable" data-idx="10">Paul nodded, feeling the weight</div>
+        <div class="line seekable" data-idx="11">of what he had become settle</div>
+        <div class="line seekable" data-idx="12">across his shoulders like a mantle.</div>
+      </div>
+      <div class="chapter-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="#555"/><rect x="1" y="6" width="8" height="1.5" rx="0.75" fill="#555"/><rect x="1" y="10" width="10" height="1.5" rx="0.75" fill="#555"/></svg>
+        <span>Chapter 31</span>
+        <span class="chapter-arrow">›</span>
+      </div>
+      <div class="playerbar">
+        <div class="bookthumb">Dune</div>
+        <div class="booktitle" id="player-title"><p>Dune | Chapter 31</p><small id="player-sub">8h 53m left</small></div>
+        <div class="btn30">30</div>
+        <div class="playbtn">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M1 1l8 5-8 5V1z" fill="#0d1117"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-hint" style="color:#ffb400;">
+      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1v10M3 4l3-3 3 3" stroke="#ffb400" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      문장 탭 → 해당 위치부터 재생
+    </div>
+  </div>
+
+</div>
+
+<script>
+const lines = document.querySelectorAll('#after-text .line.seekable');
+const hints = [
+  "해당 문장부터 재생 시작",
+  "해당 문장부터 재생 시작",
+  "해당 문장부터 재생 시작",
+  "해당 문장부터 재생 시작",
+];
+const subs = [
+  "8h 56m left", "8h 55m left", "8h 53m left", "8h 51m left",
+  "8h 50m left", "8h 49m left", "8h 48m left", "8h 47m left",
+  "8h 46m left", "8h 45m left", "8h 44m left", "8h 43m left", "8h 42m left"
+];
+let active = 2;
+
+lines.forEach((line, i) => {
+  line.addEventListener('click', () => {
+    lines[active].classList.remove('playing', 'tapped');
+    active = i;
+    line.classList.add('tapped');
+    setTimeout(() => {
+      line.classList.remove('tapped');
+      line.classList.add('playing');
+    }, 300);
+    const hint = document.getElementById('hint-msg');
+    hint.textContent = "▶  " + (hints[i] || "해당 문장부터 재생 시작");
+    hint.classList.add('visible');
+    document.getElementById('player-sub').textContent = subs[i] || "8h 40m left";
+    setTimeout(() => hint.classList.remove('visible'), 2000);
+  });
+});
+</script>
