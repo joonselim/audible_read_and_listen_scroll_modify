@@ -237,9 +237,7 @@ export function Player() {
             className="fade-in absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/60 bg-black/90 px-2.5 py-1 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm active:scale-[0.98]"
           >
             <SeekIcon />
-            <span className="font-medium">Scroll to unlock</span>
-            <span className="text-neutral-600">·</span>
-            <span className="text-neutral-200">Tap to lock</span>
+            <span className="font-medium">Tap text to play</span>
           </button>
         )}
 
