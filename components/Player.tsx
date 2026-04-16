@@ -133,6 +133,9 @@ export function Player() {
     }
   }, [state.isLocked])
 
+  // Auto-dismiss "Go back" pill timer
+  const goBackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Tap a word → seek + record previousTime (only first time) + re-lock
   const handleWordTap = useCallback(
     (word: BookWord) => {
@@ -145,11 +148,17 @@ export function Player() {
         activeWordId: word.id,
         isLocked: true
       }))
+      // Auto-dismiss "Go back" pill after 4 seconds
+      if (goBackTimer.current) clearTimeout(goBackTimer.current)
+      goBackTimer.current = setTimeout(() => {
+        setState(s => ({ ...s, previousTime: null }))
+      }, 4000)
     },
     [state.isLocked]
   )
 
   const goBack = () => {
+    if (goBackTimer.current) clearTimeout(goBackTimer.current)
     setState(s => {
       if (s.previousTime == null) return s
       const back = wordForTime(words, s.previousTime)
@@ -163,8 +172,10 @@ export function Player() {
     })
   }
 
-  const dismissGoBack = () =>
+  const dismissGoBack = () => {
+    if (goBackTimer.current) clearTimeout(goBackTimer.current)
     setState(s => ({ ...s, previousTime: null }))
+  }
 
   const resumeLock = () => {
     setHintVisible(false)
