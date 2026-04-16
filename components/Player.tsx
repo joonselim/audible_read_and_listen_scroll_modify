@@ -71,46 +71,32 @@ export function Player() {
     return () => window.clearTimeout(t)
   }, [state.activeWordId, state.isLocked])
 
-  // Two-step gesture detection: first scroll → show hint, second scroll → unlock
-  const hintVisibleRef = useRef(false)
-  // keep ref in sync so event handlers see latest value
-  hintVisibleRef.current = hintVisible
-
+  // Single-scroll unlock: first scroll gesture unlocks (eats the scroll so
+  // page doesn't jump), then the user can freely scroll OR tap a word.
   useEffect(() => {
     const el = textViewportRef.current
     if (!el) return
 
     let touchY: number | null = null
-
-    // Track whether the unlocking gesture has been consumed —
-    // we swallow the first scroll after unlock so the page doesn't jump.
     let justUnlocked = false
 
-    const handleGesture = (e: Event) => {
+    const unlock = (e: Event) => {
       if (!state.isLocked) return
-
-      if (!hintVisibleRef.current) {
-        // Step 1: show hint, DON'T unlock, eat this scroll
-        e.preventDefault()
-        setHintVisible(true)
-        if (hintTimer.current) clearTimeout(hintTimer.current)
-        hintTimer.current = setTimeout(() => setHintVisible(false), 3000)
-      } else {
-        // Step 2: actually unlock — also eat this scroll so page stays put
-        e.preventDefault()
-        if (hintTimer.current) clearTimeout(hintTimer.current)
-        setHintVisible(false)
-        justUnlocked = true
-        setState(s => (s.isLocked ? { ...s, isLocked: false } : s))
-        // Swallow the next couple of scroll events (momentum from the gesture)
-        setTimeout(() => { justUnlocked = false }, 300)
-      }
+      e.preventDefault()
+      justUnlocked = true
+      // Show the hint pill and unlock taps immediately — a second
+      // scroll (after the 300ms cooldown) will freely scroll the page.
+      setHintVisible(true)
+      if (hintTimer.current) clearTimeout(hintTimer.current)
+      hintTimer.current = setTimeout(() => setHintVisible(false), 3000)
+      setState(s => (s.isLocked ? { ...s, isLocked: false } : s))
+      setTimeout(() => { justUnlocked = false }, 300)
     }
 
     const onWheel = (e: WheelEvent) => {
       if (justUnlocked) { e.preventDefault(); return }
       if (!state.isLocked) return
-      if (Math.abs(e.deltaY) > 2) handleGesture(e)
+      if (Math.abs(e.deltaY) > 2) unlock(e)
     }
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches[0]?.clientY ?? null
@@ -119,10 +105,9 @@ export function Player() {
       if (justUnlocked) { e.preventDefault(); return }
       if (!state.isLocked || touchY == null) return
       const dy = (e.touches[0]?.clientY ?? touchY) - touchY
-      if (Math.abs(dy) > 8) handleGesture(e)
+      if (Math.abs(dy) > 8) unlock(e)
     }
 
-    // passive: false so we can call preventDefault to stop scroll
     el.addEventListener('wheel', onWheel, { passive: false })
     el.addEventListener('touchstart', onTouchStart, { passive: true })
     el.addEventListener('touchmove', onTouchMove, { passive: false })
@@ -137,9 +122,13 @@ export function Player() {
   const goBackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Tap a word → seek + record previousTime (only first time) + re-lock
+  // Allowed when unlocked OR when hint is visible (locked but user signalled intent)
+  const canTapWord = !state.isLocked || hintVisible
+
   const handleWordTap = useCallback(
     (word: BookWord) => {
-      if (state.isLocked) return // ignore taps while locked
+      if (state.isLocked && !hintVisible) return // fully locked, no hint — ignore
+      if (hintTimer.current) clearTimeout(hintTimer.current)
       setHintVisible(false)
       setState(s => ({
         ...s,
@@ -154,7 +143,7 @@ export function Player() {
         setState(s => ({ ...s, previousTime: null }))
       }, 4000)
     },
-    [state.isLocked]
+    [state.isLocked, hintVisible]
   )
 
   const goBack = () => {
@@ -225,28 +214,22 @@ export function Player() {
 
       {/* Text viewport */}
       <div className="relative flex-1 min-h-0">
-        {/* Lock / hint / unlock indicator — three states */}
+        {/* Lock / unlock indicator */}
         {state.isLocked && !hintVisible && (
           <div className="pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] text-neutral-400 ring-1 ring-white/5 backdrop-blur-sm">
             <ScrollUpIcon />
             <span>Scroll to unlock</span>
           </div>
         )}
-        {state.isLocked && hintVisible && (
-          <div className="fade-in pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/40 bg-black/85 px-2.5 py-1.5 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm">
-            <ScrollUpIcon />
-            <span className="font-medium">Scroll up to unlock</span>
-            <span className="text-neutral-500">·</span>
-            <span className="text-neutral-300">Tap to listen from there</span>
-          </div>
-        )}
-        {!state.isLocked && (
+        {(hintVisible || !state.isLocked) && (
           <button
             onClick={resumeLock}
             className="fade-in absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/60 bg-black/90 px-2.5 py-1 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm active:scale-[0.98]"
           >
-            <SeekIcon />
-            <span className="font-medium">Tap text to play</span>
+            <ScrollUpIcon />
+            <span className="font-medium">Scroll up</span>
+            <span className="text-neutral-600">·</span>
+            <span className="text-neutral-200">Tap to listen from there</span>
           </button>
         )}
 
@@ -280,7 +263,7 @@ export function Player() {
                   <p key={p.id} className={base}>
                     {paraWords.map((w, i) => {
                       const active = w.id === state.activeWordId
-                      const tappable = !state.isLocked
+                      const tappable = canTapWord
                       const isLast = i === paraWords.length - 1
                       return (
                         <span key={w.id}>
