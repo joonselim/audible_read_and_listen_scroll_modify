@@ -195,11 +195,9 @@ export function Player() {
 
   return (
     <div className="relative flex h-screen flex-col bg-ink text-neutral-100">
-      <StatusBar />
-
       {/* Top nav */}
-      <div className="flex items-center justify-between px-4 pt-2 pb-1 text-neutral-300">
-        <Link href="/" aria-label="Close player" className="p-2 -ml-2">
+      <div className="flex items-center justify-between px-4 pt-3 pb-1 text-neutral-300">
+        <Link href="/home" aria-label="Close player" className="p-2 -ml-2">
           <ChevronDown />
         </Link>
         <div className="flex items-center gap-3">
@@ -416,19 +414,6 @@ function ToggleBtn({
     >
       {children}
     </button>
-  )
-}
-
-function StatusBar() {
-  return (
-    <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[12px] font-medium text-neutral-200">
-      <span>6:19</span>
-      <div className="flex items-center gap-1.5 text-neutral-400">
-        <span className="text-[10px]">•••</span>
-        <span className="text-[10px]">📶</span>
-        <span className="rounded-sm bg-amber px-1 text-[9px] font-bold text-ink">37</span>
-      </div>
-    </div>
   )
 }
 

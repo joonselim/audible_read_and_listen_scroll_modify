@@ -83,7 +83,7 @@ type Tab = {
 }
 
 const tabs: Tab[] = [
-  { href: '/', label: 'Home' },
+  { href: '/home', label: 'Home' },
   { href: '/library', label: 'Library' },
   { href: '/discover', label: 'Discover' },
   { href: '/profile', label: 'Profile' },
@@ -95,8 +95,7 @@ export function BottomTabs() {
   return (
     <nav className="flex items-center justify-around bg-ink pt-2 pb-4">
       {tabs.map(t => {
-        const active =
-          t.href === '/' ? path === '/' : path?.startsWith(t.href)
+        const active = path?.startsWith(t.href)
         return (
           <Link
             key={t.href}
@@ -175,7 +174,6 @@ function TabIcon({
 export function TabbedScreen({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen flex-col bg-ink text-neutral-200">
-      <StatusBar />
       <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
       <MiniPlayer />
       <BottomTabs />
