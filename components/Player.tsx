@@ -82,39 +82,50 @@ export function Player() {
 
     let touchY: number | null = null
 
-    const handleGesture = () => {
+    // Track whether the unlocking gesture has been consumed —
+    // we swallow the first scroll after unlock so the page doesn't jump.
+    let justUnlocked = false
+
+    const handleGesture = (e: Event) => {
       if (!state.isLocked) return
 
       if (!hintVisibleRef.current) {
-        // Step 1: show hint, DON'T unlock
+        // Step 1: show hint, DON'T unlock, eat this scroll
+        e.preventDefault()
         setHintVisible(true)
-        // Auto-dismiss hint after 3s if user doesn't scroll again
         if (hintTimer.current) clearTimeout(hintTimer.current)
         hintTimer.current = setTimeout(() => setHintVisible(false), 3000)
       } else {
-        // Step 2: actually unlock
+        // Step 2: actually unlock — also eat this scroll so page stays put
+        e.preventDefault()
         if (hintTimer.current) clearTimeout(hintTimer.current)
         setHintVisible(false)
+        justUnlocked = true
         setState(s => (s.isLocked ? { ...s, isLocked: false } : s))
+        // Swallow the next couple of scroll events (momentum from the gesture)
+        setTimeout(() => { justUnlocked = false }, 300)
       }
     }
 
     const onWheel = (e: WheelEvent) => {
+      if (justUnlocked) { e.preventDefault(); return }
       if (!state.isLocked) return
-      if (Math.abs(e.deltaY) > 2) handleGesture()
+      if (Math.abs(e.deltaY) > 2) handleGesture(e)
     }
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches[0]?.clientY ?? null
     }
     const onTouchMove = (e: TouchEvent) => {
+      if (justUnlocked) { e.preventDefault(); return }
       if (!state.isLocked || touchY == null) return
       const dy = (e.touches[0]?.clientY ?? touchY) - touchY
-      if (Math.abs(dy) > 8) handleGesture()
+      if (Math.abs(dy) > 8) handleGesture(e)
     }
 
-    el.addEventListener('wheel', onWheel, { passive: true })
+    // passive: false so we can call preventDefault to stop scroll
+    el.addEventListener('wheel', onWheel, { passive: false })
     el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
     return () => {
       el.removeEventListener('wheel', onWheel)
       el.removeEventListener('touchstart', onTouchStart)
@@ -230,7 +241,7 @@ export function Player() {
             className="fade-in absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber/60 bg-black/90 px-2.5 py-1 text-[10px] text-amber shadow-lg shadow-black/50 backdrop-blur-sm active:scale-[0.98]"
           >
             <SeekIcon />
-            <span className="font-medium">Scroll to seek</span>
+            <span className="font-medium">Scroll to unlock</span>
             <span className="text-neutral-600">·</span>
             <span className="text-neutral-200">Tap to lock</span>
           </button>
