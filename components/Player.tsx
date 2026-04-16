@@ -219,12 +219,8 @@ export function Player() {
         {/* Lock / hint / unlock indicator — three states */}
         {state.isLocked && !hintVisible && (
           <div className="pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] text-neutral-400 ring-1 ring-white/5 backdrop-blur-sm">
-            <LockIcon />
-            <span>Following playback</span>
-            <span
-              className="ml-0.5 inline-block h-1 w-1 rounded-full bg-amber pulse-dot"
-              aria-hidden
-            />
+            <ScrollUpIcon />
+            <span>Scroll to unlock</span>
           </div>
         )}
         {state.isLocked && hintVisible && (
